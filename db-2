@@ -1,0 +1,127 @@
+-----------------------1. app.js--------------------------------
+const express = require("express");
+const mongoose = require("mongoose");
+const bodyParser = require("body-parser");
+const studentRoutes = require("./routes/studentRoutes");
+
+const app = express();
+app.use(bodyParser.json());
+app.use("/students", studentRoutes);
+
+mongoose.connect("mongodb://127.0.0.1:27017/studentDB", {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log("MongoDB connected"))
+.catch(err => console.error(err));
+
+app.listen(3000, () => console.log("Server running on port 3000"));
+
+------------------------------2. models/student.js-----------------------------
+const mongoose = require("mongoose");
+
+const studentSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  age: { type: Number, required: true, min: 1 },
+  course: { type: String, required: true, trim: true }
+});
+
+module.exports = mongoose.model("Student", studentSchema);
+
+---------------------------3. controllers/studentController.js-----------------------
+const Student = require("../models/student");
+
+exports.createStudent = async (req, res) => {
+  try {
+    const student = new Student(req.body);
+    await student.save();
+    res.status(201).send(student);
+  } catch (err) {
+    res.status(400).send({ error: err.message });
+  }
+};
+
+exports.getAllStudents = async (req, res) => {
+  try {
+    const students = await Student.find();
+    res.status(200).send(students);
+  } catch (err) {
+    res.status(500).send({ error: err.message });
+  }
+};
+
+exports.updateStudent = async (req, res) => {
+  try {
+    const student = await Student.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (!student) return res.status(404).send({ message: "Student not found" });
+    res.send(student);
+  } catch (err) {
+    res.status(400).send({ error: err.message });
+  }
+};
+
+exports.deleteStudent = async (req, res) => {
+  try {
+    const student = await Student.findByIdAndDelete(req.params.id);
+    if (!student) return res.status(404).send({ message: "Student not found" });
+    res.send({ message: "Student deleted successfully" });
+  } catch (err) {
+    res.status(500).send({ error: err.message });
+  }
+};
+
+---------------------4. routes/studentRoutes.js-------------------------
+const express = require("express");
+const router = express.Router();
+const studentController = require("../controllers/studentController");
+
+router.post("/", studentController.createStudent);
+router.get("/", studentController.getAllStudents);
+router.put("/:id", studentController.updateStudent);
+router.delete("/:id", studentController.deleteStudent);
+
+module.exports = router;
+
+--------------------5. package.json------------------------
+{
+  "name": "student-management",
+  "version": "1.0.0",
+  "description": "Student Management System using Node.js, MongoDB and MVC architecture",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0"
+  },
+  "author": "Nancy",
+  "license": "ISC"
+}
+
+--------------------6. README.md------------------------------
+# Student Management System
+
+A Node.js application using MVC architecture to manage student data stored in MongoDB.
+
+## Features
+
+- Add a new student
+- View all students
+- Update student by ID
+- Delete student by ID
+- Structured using MVC principles
+
+
+
+Start MongoDB (locally or Atlas) and run the server:
+
+npm start
+
+
+Server runs on http://localhost:3000
