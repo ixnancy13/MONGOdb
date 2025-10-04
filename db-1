@@ -1,0 +1,119 @@
+-------------------------1. app.js------------------------------
+const express = require("express");
+const mongoose = require("mongoose");
+const bodyParser = require("body-parser");
+
+const app = express();
+app.use(bodyParser.json());
+
+mongoose.connect("mongodb://127.0.0.1:27017/productDB", {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log("MongoDB connected"))
+.catch(err => console.error(err));
+
+const productSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  price: { type: Number, required: true, min: 0 },
+  category: { type: String, required: true, trim: true }
+});
+
+const Product = mongoose.model("Product", productSchema);
+
+app.post("/products", async (req, res) => {
+  try {
+    const product = new Product(req.body);
+    await product.save();
+    res.status(201).send(product);
+  } catch (err) {
+    res.status(400).send({ error: err.message });
+  }
+});
+
+app.get("/products", async (req, res) => {
+  try {
+    const products = await Product.find();
+    res.status(200).send(products);
+  } catch (err) {
+    res.status(500).send({ error: err.message });
+  }
+});
+
+app.put("/products/:id", async (req, res) => {
+  try {
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (!product) return res.status(404).send({ message: "Product not found" });
+    res.send(product);
+  } catch (err) {
+    res.status(400).send({ error: err.message });
+  }
+});
+
+app.delete("/products/:id", async (req, res) => {
+  try {
+    const product = await Product.findByIdAndDelete(req.params.id);
+    if (!product) return res.status(404).send({ message: "Product not found" });
+    res.send({ message: "Product deleted successfully" });
+  } catch (err) {
+    res.status(500).send({ error: err.message });
+  }
+});
+
+app.listen(3000, () => console.log("Server running on port 3000"));
+
+-----------------------------------2. package.json---------------------------------------
+{
+  "name": "product-crud",
+  "version": "1.0.0",
+  "description": "CRUD operations for Product database using Mongoose in Node.js",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0"
+  },
+  "author": "Nancy",
+  "license": "ISC"
+}
+
+3. README.md
+# Product CRUD API
+
+This Node.js application demonstrates CRUD operations (Create, Read, Update, Delete) on a Product database using **MongoDB** and **Mongoose**.
+
+## Features
+
+- Add a new product
+- View all products
+- Update a product by ID
+- Delete a product by ID
+- Data validation and error handling
+
+
+
+
+
+
+
+Server will run on http://localhost:3000
+
+API Endpoints
+
+POST /products → Add new product
+Body: { "name": "Laptop", "price": 55000, "category": "Electronics" }
+
+GET /products → Get all products
+
+PUT /products/:id → Update product by ID
+Body: { "price": 60000 }
+
+DELETE /products/:id → Delete product by ID
+
