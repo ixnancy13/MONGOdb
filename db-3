@@ -1,0 +1,136 @@
+-----------------------1. models/product.js-------------------------
+const mongoose = require("mongoose");
+
+const variantSchema = new mongoose.Schema({
+  color: { type: String, required: true },
+  size: { type: String, required: true },
+  stock: { type: Number, required: true, min: 0 }
+});
+
+const productSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  price: { type: Number, required: true, min: 0 },
+  category: { type: String, required: true, trim: true },
+  variants: [variantSchema]
+});
+
+module.exports = mongoose.model("Product", productSchema);
+
+----------------------2. app.js----------------------
+const express = require("express");
+const mongoose = require("mongoose");
+const bodyParser = require("body-parser");
+const Product = require("./models/product");
+
+const app = express();
+app.use(bodyParser.json());
+
+mongoose.connect("mongodb://127.0.0.1:27017/ecommerceDB", {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log("MongoDB connected"))
+.catch(err => console.error(err));
+
+// Insert sample products
+app.post("/products/sample", async (req, res) => {
+  try {
+    const sampleProducts = [
+      {
+        name: "T-Shirt",
+        price: 500,
+        category: "Clothing",
+        variants: [
+          { color: "Red", size: "M", stock: 10 },
+          { color: "Blue", size: "L", stock: 5 }
+        ]
+      },
+      {
+        name: "Sneakers",
+        price: 2000,
+        category: "Footwear",
+        variants: [
+          { color: "White", size: "8", stock: 8 },
+          { color: "Black", size: "9", stock: 3 }
+        ]
+      }
+    ];
+    const products = await Product.insertMany(sampleProducts);
+    res.status(201).send(products);
+  } catch (err) {
+    res.status(400).send({ error: err.message });
+  }
+});
+
+// Get all products
+app.get("/products", async (req, res) => {
+  try {
+    const products = await Product.find();
+    res.status(200).send(products);
+  } catch (err) {
+    res.status(500).send({ error: err.message });
+  }
+});
+
+// Filter products by category
+app.get("/products/category/:category", async (req, res) => {
+  try {
+    const products = await Product.find({ category: req.params.category });
+    res.status(200).send(products);
+  } catch (err) {
+    res.status(500).send({ error: err.message });
+  }
+});
+
+// Project specific variant details (e.g., only color and stock)
+app.get("/products/variants/:productId", async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.productId, "name variants.color variants.stock");
+    if (!product) return res.status(404).send({ message: "Product not found" });
+    res.send(product);
+  } catch (err) {
+    res.status(500).send({ error: err.message });
+  }
+});
+
+app.listen(3000, () => console.log("Server running on port 3000"));
+
+------------------------3. package.json-----------------------------
+{
+  "name": "ecommerce-catalog",
+  "version": "1.0.0",
+  "description": "E-commerce Catalog with Nested Document Structure in MongoDB using Node.js and Mongoose",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0"
+  },
+  "author": "Nancy",
+  "license": "ISC"
+}
+
+-----------------------------------4. README.md--------------------------------
+# E-commerce Catalog
+
+Node.js application demonstrating an E-commerce catalog with nested documents in MongoDB using Mongoose.
+
+## Features
+
+- Insert sample products with multiple variants
+- Retrieve all products
+- Filter products by category
+- Project specific variant details
+
+
+
+Start MongoDB and run the server:
+
+npm start
+
+
+Server runs on http://localhost:3000
+
